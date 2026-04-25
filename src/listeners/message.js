@@ -1,5 +1,5 @@
 // src/listeners/message.js
-const { adicionarAoLote } = require('../services/batchService');
+const { adicionarAoLote } = require('../services/batch');
 const { deveIgnorarMensagem } = require('../utils/filters');
 const { verificarSpam } = require('../utils/security');
 const { prepararDadosMensagem } = require('../utils/dataPreparer');
