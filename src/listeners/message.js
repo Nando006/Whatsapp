@@ -1,3 +1,4 @@
+const fs = require('fs').promises;
 const { saveMedia } = require('../services/storage');
 const { analisarComGemini } = require('../services/ai');
 
@@ -13,6 +14,10 @@ const PENALTY_TIME = 60000;
 
 function startMessageListener(client) {
   client.onMessage(async (message) => {
+    if (message.type === 'sticker') {
+      return; // Simplesmente ignora a figurinha
+    }
+
     // Se o tempo da mensagem for menor que o tempo que bot ligou, ignoramos.
     if (message.timestamp < BOT_START_TIME) {
       return;
@@ -21,6 +26,8 @@ function startMessageListener(client) {
     // Filtro melhorado para ignorar Grupos, Status e Canais/Newsletters
     if (
       message.isGroupMsg ||
+      message.isStatus || // <-- NOVO: Bloqueio nativo de qualquer status
+      message.id.remote === 'status@broadcast' || // <-- NOVO: Bloqueio de ID remoto
       message.from === 'status@broadcast' ||
       message.from.includes('@newsletter') ||
       message.from.includes('@broadcast')
@@ -60,7 +67,7 @@ function startMessageListener(client) {
     // 2. DOWNLOAD IMEDIATO (Corrige o erro msgChunks)
     // ==========================================
     let caminhoSalvo = null;
-    const isMediaFile = message.isMedia || ['image', 'video', 'document', 'audio', 'ptt'].includes(message.type);
+    const isMediaFile = message.isMedia || ['image', 'video', 'document', 'audio', 'ptt'].includes(message.type) && message.type !== 'sticker';
 
     if (isMediaFile) {
       try {
@@ -128,10 +135,32 @@ async function processarLote(client, chatId, messages) {
   // 2. Chama a IA
   const respostaIA = await analisarComGemini(contextoTexto, caminhosArquivos);
 
+  // 🛑 CADEADO DE SAÍDA: Prevenção contra postagem indevida
+  if (chatId === 'status@broadcast' || chatId.includes('@broadcast')) {
+    console.warn(`🛑 ALERTA: O bot tentou postar no Status! Ação bloqueada por segurança.`);
+  } else {
+    // 3. Responde o usuário normalmente (se não for status)
+    await client.sendText(chatId, respostaIA);
+    console.log(`✅ Resposta enviada com sucesso para ${chatId}!\n`);
+  }
+
   // 3. Responde o usuário
   await client.sendText(chatId, respostaIA);
 
   console.log(`✅ Resposta enviada com sucesso para ${chatId}!\n`);
+
+  if (caminhosArquivos.length > 0) {
+    console.log(`🧹 Iniciando limpeza de ${caminhosArquivos.length} arquivo(s) temporário(s)...`);
+    for (const caminho of caminhosArquivos) {
+      try {
+        await fs.unlink(caminho); // Apaga o arquivo do disco
+        console.log(`🗑️ Arquivo apagado: ${caminho}`);
+      } catch (erro) {
+        console.error(`⚠️ Erro ao tentar apagar o arquivo ${caminho}:`, erro);
+      }
+    }
+    console.log('🧹 Limpeza de arquivos concluída.\n');
+  }
 }
 
 module.exports = { startMessageListener };
