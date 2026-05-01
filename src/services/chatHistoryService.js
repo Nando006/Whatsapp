@@ -35,3 +35,5 @@ async function buscarHistoricoRecente(whatsappId) {
     parts: [{ text: msg.conteudo }]
   }));
 }
+
+module.exports = { salvarMensagem, buscarHistoricoRecente };

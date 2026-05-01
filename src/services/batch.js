@@ -1,6 +1,7 @@
 // Cuida exclusivamente da "caixa de espera" (Buffer). Decide quando o lote está pronto e chama a IA
 const fs = require('fs').promises;
 const { analisarComGemini } = require('./ai');
+const { salvarMensagem, buscarHistoricoRecente } = require('./chatHistoryService');
 
 const messageBuffer = new Map();
 
@@ -18,7 +19,7 @@ async function adicionarAoLote(client, chatId, messageData) {
   session.timer = setTimeout(() => processarLote(client, chatId), 8000);
 }
 
-async function processarLote(cliente, chatId) {
+async function processarLote(client, chatId) {
   const session = messageBuffer.get(chatId);
   if (!session) return;
 
