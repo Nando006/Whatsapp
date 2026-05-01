@@ -29,23 +29,31 @@ function formatarArquivoParaIA(caminhoArquivo) {
   };
 }
 
-async function analisarComGemini(textoUsuario, caminhosArquivos = []) {
+async function analisarComGemini(textoUsuario, caminhosArquivos = [], historico = []) {
   try {
-    // PROMPT "JEDI MIND TRICK": Precisamos gritar com a IA que ela SABE ouvir e ver.
     const promptSistema = `Você é um assistente de IA altamente avançado.
         INSTRUÇÃO CRÍTICA: Você possui capacidade nativa de OUVIR áudios e VER imagens. Os arquivos foram extraídos e enviados em anexo para você nesta requisição.
-        Se o usuário tiver enviado um áudio, ESCUTE atentamente o arquivo anexado e responda à pergunta ou comando contido na voz dele.
-        
-        Texto da mensagem (se houver):
-        "${textoUsuario || '[O usuário enviou uma mensagem de voz/mídia. Analise o arquivo em anexo e responda diretamente.]'}"`;
+        Se o usuário tiver enviado um áudio, ESCUTE atentamente o arquivo anexado e responda à pergunta ou comando contido na voz dele.`;
 
-    const partes = [promptSistema];
+    // 1. Iniciamos o chat com o histórico prévio e o prompt de sistema
+    const chat = model.startChat({
+      history: historico,
+      systemInstruction: promptSistema // O Gemini mais recente permite systemInstruction no startChat
+    });
 
+    // 2. Montamos a requisição atual do usuário
+    const partesAtual = [];
+    
+    // Texto atual (seja ele o contexto da batch ou fallback se for áudio)
+    partesAtual.push(textoUsuario || '[O usuário enviou uma mensagem de voz/mídia. Analise o arquivo em anexo e responda diretamente.]');
+
+    // Arquivos atuais anexados na batch
     for (const caminho of caminhosArquivos) {
-      partes.push(formatarArquivoParaIA(caminho));
+      partesAtual.push(formatarArquivoParaIA(caminho));
     }
 
-    const result = await model.generateContent(partes);
+    // 3. Enviamos a mensagem para o chat ativo (que já tem o histórico)
+    const result = await chat.sendMessage(partesAtual);
     return result.response.text();
 
   } catch (error) {

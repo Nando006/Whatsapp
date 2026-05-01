@@ -25,8 +25,6 @@ async function processarLote(cliente, chatId) {
   const messages = [...session.messages];
   messageBuffer.delete(chatId);
 
-  console.log(`🚀 Processando lote de ${messages.length} mensagens para ${chatId}`);
-
   let contextoTexto = "";
   let caminhosArquivos = [];
 
@@ -40,17 +38,24 @@ async function processarLote(cliente, chatId) {
     }
   }
 
-  const respostaIA = await analisarComGemini(contextoTexto, caminhosArquivos);
+  // Salva o que o usuário disse
+  await salvarMensagem(chatId, 'usuario', contextoTexto.trim());
+
+  // Busca a memória da última hora
+  const historico = await buscarHistoricoRecente(chatId);
+
+  // Chama a IA passando o histórico junto
+  const respostaIA = await analisarComGemini(contextoTexto, caminhosArquivos, historico);
 
   // Fail-safe de segurança
   if (!chatId.includes('@broadcast')) {
     await client.sendText(chatId, respostaIA);
-    console.log(`✅ Resposta enviada para ${chatId}!`);
+    await salvarMensagem(chatId, 'ia', respostaIA);
   }
 
   // Limpeza automática
   for (const caminho of caminhosArquivos) {
-    try { await fs.unlink(caminho); } catch (e) { }
+    try { await fs.unlink(caminho); } catch (e) {}
   }
 }
 

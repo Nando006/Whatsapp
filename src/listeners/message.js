@@ -3,20 +3,24 @@ const { adicionarAoLote } = require('../services/batch');
 const { deveIgnorarMensagem } = require('../utils/filters');
 const { verificarSpam } = require('../utils/security');
 const { prepararDadosMensagem } = require('../utils/dataPreparer');
+const { registrarOuAtualizarUsuario } = require('../services/userService');
 
 function startMessageListener(client) {
   client.onMessage(async (message) => {
 
-    // 1. Filtragem (Filtra o que não interessa)
+    // Filtragem (Filtra o que não interessa)
     if (deveIgnorarMensagem(message)) return;
 
-    // 2. Segurança (Protege contra spam)
+    // Segurança (Protege contra spam)
     if (verificarSpam(message.from)) return;
 
-    // 3. Preparação (Trata download e formatação)
+    // Registrar mensagem no banco de dados
+    await registrarOuAtualizarUsuario(message.from);
+
+    // Preparação (Trata download e formatação)
     const dadosProntos = await prepararDadosMensagem(client, message);
 
-    // 4. Ação (Agrupa para análise)
+    // Ação (Agrupa para análise)
     adicionarAoLote(client, message.from, dadosProntos);
   });
 }
