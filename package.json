@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/app.js",
-    "dev": "nodemon --ignore downloads/ --ignore tokens/ src/app.js"
+    "dev": "nodemon --ignore downloads/ --ignore tokens/ src/app.js",
+    "envio-massa": "node src/scripts/envio-massa.js"
   },
   "keywords": [],
   "author": "",
