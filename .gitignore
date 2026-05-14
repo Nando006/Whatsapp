@@ -2,3 +2,4 @@ node_modules/
 tokens/
 downloads/
 .env
+.claude/settings.local.json
